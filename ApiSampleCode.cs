@@ -50,7 +50,7 @@ namespace codesample
 
             // Add Headers
             sampleRequest.AddHeader("Ocp-Apim-Subscription-Key", SubscriptionKey);
-            sampleRequest.AddHeader("authorisation", "Bearer " + GetAccessToken());
+            sampleRequest.AddHeader("authorisation", "Bearer " + GetAccessToken_AuthorisationCode());
             sampleRequest.AddHeader("accept", "application/json; charset=utf-8");
 
             // Execute the query and retrieve results
@@ -68,14 +68,14 @@ namespace codesample
 
             // Add Headers
             sampleRequest.AddHeader("Ocp-Apim-Subscription-Key", SubscriptionKey);
-            sampleRequest.AddHeader("authorisation", "Bearer " + GetAccessToken());
+            sampleRequest.AddHeader("authorisation", "Bearer " + GetAccessToken_ClientCredentials());
             sampleRequest.AddHeader("accept", "application/json; charset=utf-8");
 
             // Execute the query and retrieve results
             var response = sampleClient.Execute(sampleRequest);
         }
 
-        private string GetAccessToken()
+        private string GetAccessToken_ClientCredentials()
         {
             var tokenClient = new RestClient();
             var tokenRequest = new RestRequest()
@@ -87,6 +87,28 @@ namespace codesample
             tokenRequest.AddParameter("client_id", "<PASTE client id here>");
             tokenRequest.AddParameter("client_secret", "<PASTE client secret here>");
             tokenRequest.AddParameter("Content-Type", "application/x-www-form-urlencoded");
+
+            // make call to get token
+            IRestResponse response = tokenClient.Execute(tokenRequest);
+
+            // extract access token and refresh token
+            Refresh_token = JObject.Parse(response.Content).SelectToken("$..refresh_token").ToString();
+            return JObject.Parse(response.Content).SelectToken("$..access_token").ToString();
+        }
+
+        private string GetAccessToken_AuthorisationCode()
+        {
+            var tokenClient = new RestClient();
+            var tokenRequest = new RestRequest()
+            {
+                Resource = "<token endpoint resource>",
+                Method = Method.POST,
+            };
+            tokenRequest.AddParameter("grant_type", "authorisation_code");
+            tokenRequest.AddParameter("code", "<PASTE authorisation code here>");
+            tokenRequest.AddParameter("client_id", "<PASTE client id here>");
+            tokenRequest.AddParameter("client_secret", "<PASTE client secret here>");
+            tokenRequest.AddParameter("redirect_URL", "<PASTE Redirect URL here>");
 
             // make call to get token
             IRestResponse response = tokenClient.Execute(tokenRequest);
