@@ -1,37 +1,122 @@
-## Welcome to GitHub Pages
+using Newtonsoft.Json.Linq;
+using RestSharp;
+using System.Net;
 
-You can use the [editor on GitHub](https://github.com/dsharmaESF/eapim.api.sample.code/edit/main/docs/index.md) to maintain and preview the content for your website in Markdown files.
+namespace codesample
+{
+    public class ApiSampleCode
+    {
+        private static readonly string SubscriptionKey = "<Enter the Subscription Key here>";
+        private static readonly string BaseUrl = "<Enter the Base Url here, for e.g. https://oat-api-customerengagement.platform.education.gov.uk>";
+        private static string Refresh_token { get; set; }
+        private RestClient sampleClient;
+        private RestRequest sampleRequest;
+       
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+        public ApiSampleCode()
+        {
+            sampleClient = new RestClient()
+            {
+                BaseUrl = new System.Uri(BaseUrl)
+            };
+        }
 
-### Markdown
+        public void GetOpenInfo()
+        {
+            // construct the GET request for our DfE Open Information endpoint 
+            sampleRequest = new RestRequest()
+            {
+               Resource = "DfE/open-info",
+               Method = Method.GET
+            };
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+            // Add Subscription Key Header
+            sampleRequest.AddHeader("Ocp-Apim-Subscription-Key", SubscriptionKey);
 
-```markdown
-Syntax highlighted code block
+            // Execute the query and retrieve results
+            var queryResult = sampleClient.Execute(sampleRequest);
+            HttpStatusCode statusCode = queryResult.StatusCode;
+            int numericStatusCode = (int)statusCode;
+        }
 
-# Header 1
-## Header 2
-### Header 3
+        public void GetApplicationInfo()
+        {
+            // construct the GET request for our DfE Application Information endpoint 
+            sampleRequest = new RestRequest()
+            {
+                Resource = "DfE/application-info",
+                Method = Method.GET
+            };
 
-- Bulleted
-- List
+            // Add Headers
+            sampleRequest.AddHeader("Ocp-Apim-Subscription-Key", SubscriptionKey);
+            sampleRequest.AddHeader("authorisation", "Bearer " + GetAccessToken());
+            sampleRequest.AddHeader("accept", "application/json; charset=utf-8");
 
-1. Numbered
-2. List
+            // Execute the query and retrieve results
+            var response = sampleClient.Execute(sampleRequest);
+        }
 
-**Bold** and _Italic_ and `Code` text
+        public void GetUserInfo()
+        {
+            // construct the GET request for our DfE Application Information endpoint 
+            sampleRequest = new RestRequest()
+            {
+                Resource = "DfE/user-info",
+                Method = Method.GET
+            };  
 
-[Link](url) and ![Image](src)
-```
+            // Add Headers
+            sampleRequest.AddHeader("Ocp-Apim-Subscription-Key", SubscriptionKey);
+            sampleRequest.AddHeader("authorisation", "Bearer " + GetAccessToken());
+            sampleRequest.AddHeader("accept", "application/json; charset=utf-8");
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+            // Execute the query and retrieve results
+            var response = sampleClient.Execute(sampleRequest);
+        }
 
-### Jekyll Themes
+        private string GetAccessToken()
+        {
+            var tokenClient = new RestClient();
+            var tokenRequest = new RestRequest()
+            {
+                Resource = "<token endpoint resource>",
+                Method = Method.POST,
+            };
+            tokenRequest.AddParameter("grant_type", "client_credentials");
+            tokenRequest.AddParameter("client_id", "<PASTE client id here>");
+            tokenRequest.AddParameter("client_secret", "<PASTE client secret here>");
+            tokenRequest.AddParameter("Content-Type", "application/x-www-form-urlencoded");
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/dsharmaESF/eapim.api.sample.code/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+            // make call to get token
+            IRestResponse response = tokenClient.Execute(tokenRequest);
 
-### Support or Contact
+            // extract access token and refresh token
+            Refresh_token = JObject.Parse(response.Content).SelectToken("$..refresh_token").ToString();
+            return JObject.Parse(response.Content).SelectToken("$..access_token").ToString();
+        }
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+        private string RefreshAccessToken()
+        {
+            var tokenClient = new RestClient();
+            var tokenRequest = new RestRequest()
+            {
+                Resource = "<token endpoint resource>",
+                Method = Method.POST,
+            };
+            tokenRequest.AddParameter("grant_type", "refresh_token");
+            tokenRequest.AddParameter("refresh_token", Refresh_token);
+            tokenRequest.AddParameter("client_id", "<PASTE client id here>");
+            tokenRequest.AddParameter("client_secret", "<PASTE client secret here>");
+            tokenRequest.AddParameter("Content-Type", "application/x-www-form-urlencoded");
+
+            // make call to get token
+            IRestResponse response = tokenClient.Execute(tokenRequest);
+
+            // extract token
+            return JObject.Parse(response.Content).SelectToken("$..access_token").ToString();
+        }
+    }
+}
+
+
